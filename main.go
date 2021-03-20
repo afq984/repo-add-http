@@ -102,7 +102,10 @@ func (s *server) handlePut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command(cRepoAdd, "--new", "--remove", s.repoDB, pkgpath)
+	cmd := exec.Command(cRepoAdd,
+		"--new", "--remove", "--prevent-downgrade",
+		s.repoDB, pkgpath,
+	)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	s.dbMux.Lock()

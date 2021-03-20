@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -56,6 +57,8 @@ func errorStatus(w http.ResponseWriter, code int) {
 }
 
 func (s *server) handlePut(w http.ResponseWriter, r *http.Request) {
+	defer io.Copy(ioutil.Discard, r.Body)
+
 	pkgname := path.Base(r.URL.Path)
 	if len(pkgname) > 80 {
 		http.Error(w, "package name too long", http.StatusBadRequest)

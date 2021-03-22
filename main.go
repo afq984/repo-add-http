@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -38,6 +39,13 @@ func newServer(repoDB string) (*server, error) {
 	s := &server{
 		repoDir: filepath.Dir(repoDB),
 		repoDB:  repoDB,
+	}
+	cmd := exec.Command(cRepoAdd, repoDB)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"cannot create empty repo %s: %v\noutput:\n%s",
+			repoDB, err, output)
 	}
 	return s, os.MkdirAll(s.repoDir, 0755)
 }

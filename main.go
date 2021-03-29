@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -51,7 +50,9 @@ func newServer(repoDB string) (*server, error) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "PUT" {
+	if r.Method == "HEAD" {
+		s.handleHead(w, r)
+	} else if r.Method == "PUT" {
 		s.handlePut(w, r)
 	} else if r.URL.Path == "/ping" {
 		io.WriteString(w, "pong\n")
@@ -64,21 +65,47 @@ func errorStatus(w http.ResponseWriter, code int) {
 	http.Error(w, http.StatusText(code), code)
 }
 
-func (s *server) handlePut(w http.ResponseWriter, r *http.Request) {
-	defer io.Copy(ioutil.Discard, r.Body)
-
-	pkgname := path.Base(r.URL.Path)
+func (s *server) getPkgNameAndPath(w http.ResponseWriter, r *http.Request) (pkgname, pkgpath string, ok bool) {
+	pkgname = path.Base(r.URL.Path)
 	if len(pkgname) > 80 {
 		http.Error(w, "package name too long", http.StatusBadRequest)
 		return
 	}
-	pkgpath := filepath.Join(s.repoDir, pkgname)
+	pkgpath = filepath.Join(s.repoDir, pkgname)
+	ok = true
+	return
+}
+
+func (s *server) handleHead(w http.ResponseWriter, r *http.Request) {
+	_, pkgpath, ok := s.getPkgNameAndPath(w, r)
+	if !ok {
+		return
+	}
+
+	_, err := os.Stat(pkgpath)
+	if err == nil {
+		return
+	}
+	if os.IsNotExist(err) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	log.Printf("unexpected error stat %s: %v", pkgpath, err)
+	w.WriteHeader(http.StatusInternalServerError)
+}
+
+func (s *server) handlePut(w http.ResponseWriter, r *http.Request) {
+	pkgname, pkgpath, ok := s.getPkgNameAndPath(w, r)
+	if !ok {
+		return
+	}
+
 	log.Printf("receiving package %s", pkgname)
 
 	f, err := os.OpenFile(pkgpath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0755)
 	if os.IsExist(err) {
 		log.Print("package already exists")
-		io.WriteString(w, "package already exists\n")
+		http.Error(w, "package already exists", http.StatusConflict)
 		return
 	}
 	if err != nil {

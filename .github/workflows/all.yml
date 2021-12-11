@@ -8,7 +8,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: alpine:latest
+    container: alpine:3.14
     steps:
       - uses: actions/checkout@v2
       - run: apk add pacman go gcc fakeroot runuser

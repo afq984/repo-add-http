@@ -50,12 +50,12 @@ func newServer(repoDB string) (*server, error) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		s.handleHead(w, r)
+	if r.URL.Path == "/ping" {
+		io.WriteString(w, "pong\n")
+	} else if r.Method == "HEAD" || r.Method == "GET" {
+		s.handleHeadGet(w, r)
 	} else if r.Method == "PUT" {
 		s.handlePut(w, r)
-	} else if r.URL.Path == "/ping" {
-		io.WriteString(w, "pong\n")
 	} else {
 		errorStatus(w, 404)
 	}
@@ -76,7 +76,7 @@ func (s *server) getPkgNameAndPath(w http.ResponseWriter, r *http.Request) (pkgn
 	return
 }
 
-func (s *server) handleHead(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleHeadGet(w http.ResponseWriter, r *http.Request) {
 	_, pkgpath, ok := s.getPkgNameAndPath(w, r)
 	if !ok {
 		return
@@ -84,6 +84,7 @@ func (s *server) handleHead(w http.ResponseWriter, r *http.Request) {
 
 	_, err := os.Stat(pkgpath)
 	if err == nil {
+		http.ServeFile(w, r, pkgpath)
 		return
 	}
 	if os.IsNotExist(err) {

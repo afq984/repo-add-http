@@ -94,6 +94,7 @@ func TestPing(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 	assert.Equal(t, "pong\n", resp.Body.String())
 }
+
 func TestHeadPutHead(t *testing.T) {
 	s := newTestServer(t)
 	pkg := makepkg(t, "pacman", "1.0.0")
